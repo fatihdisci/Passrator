@@ -10,7 +10,7 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
   .wrap{min-height:100dvh;display:grid;place-items:center;padding:24px}
-  .card{width:100%;max-width:720px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .card{width:100%;max-width:820px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
   h1{margin:0 0 12px;font-size:18px}
   .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
   .out{display:flex;gap:10px;align-items:center;background:#111319;border:1px solid var(--line);border-radius:12px;padding:10px}
@@ -24,19 +24,29 @@
   .check{display:flex;gap:8px;align-items:center;font-size:14px}
   .check input{width:18px;height:18px}
   .len{display:flex;gap:10px;align-items:center}
-  input[type="number"]{width:90px;background:#0f1116;border:1px solid var(--line);border-radius:10px;color:#fff;padding:8px 10px}
+  input[type="number"], input[type="text"]{background:#0f1116;border:1px solid var(--line);border-radius:10px;color:#fff;padding:8px 10px}
+  input[type="number"]{width:90px}
   .hint{color:var(--muted);font-size:12px}
   .bar{height:8px;background:#1b1f29;border:1px solid var(--line);border-radius:999px;overflow:hidden}
   .bar>span{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff5a5f,#ffb15a,#4fb477)}
   .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .savegrid{display:grid;grid-template-columns:1.2fr 1fr auto;gap:8px;align-items:center}
   /* Kayıtlı liste */
   .list{display:flex;flex-direction:column;gap:8px}
-  .item{display:flex;gap:8px;align-items:center;justify-content:space-between;background:#0f1116;border:1px solid var(--line);border-radius:10px;padding:8px}
-  .item .pw{font:600 14px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;word-break:break-all;flex:1}
-  .item .actions{display:flex;gap:6px}
+  .item{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;background:#0f1116;border:1px solid var(--line);border-radius:10px;padding:10px}
+  .left{flex:1;min-width:0}
+  .name{font-weight:700;margin-bottom:4px}
+  .tags{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{font-size:12px;color:#cfd6df;background:#1a1f29;border:1px solid #2a3040;border-radius:999px;padding:3px 8px}
+  .pw{margin-top:6px;font:600 14px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;word-break:break-all}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
   .sm{padding:6px 9px;font-weight:600;font-size:13px;border-radius:8px}
   .row-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  @media (max-width:560px){.checks{grid-template-columns:1fr}.row{gap:8px}}
+  @media (max-width:720px){
+    .checks{grid-template-columns:1fr}
+    .row{gap:8px}
+    .savegrid{grid-template-columns:1fr;gap:10px}
+  }
 </style>
 </head>
 <body>
@@ -44,6 +54,7 @@
   <div class="card">
     <h1>🔐 Şifre Oluşturucu</h1>
 
+    <!-- Çıktı ve temel butonlar -->
     <div class="out">
       <div id="pwd" aria-live="polite">—</div>
       <button id="copyBtn" class="btn ghost" type="button">📋 Kopyala</button>
@@ -51,26 +62,32 @@
     </div>
 
     <div class="grid">
+      <!-- Uzunluk ve kurallar -->
       <div class="panel">
-        <div class="len">
-          <label for="len"><strong>Karakter sayısı</strong></label>
-          <input id="len" type="number" min="4" max="64" value="12">
-          <div class="hint">4 – 64</div>
+        <div class="row" style="justify-content:space-between">
+          <div class="len">
+            <label for="len"><strong>Karakter sayısı</strong></label>
+            <input id="len" type="number" min="4" max="64" value="12">
+            <div class="hint">4 – 64</div>
+          </div>
+          <div class="checks">
+            <label class="check"><input id="u" type="checkbox" checked> Büyük harf (A–Z)</label>
+            <label class="check"><input id="l" type="checkbox" checked> Küçük harf (a–z)</label>
+            <label class="check"><input id="d" type="checkbox" checked> Rakam (0–9)</label>
+            <label class="check"><input id="s" type="checkbox"> Semboller (yalnızca . ve -)</label>
+          </div>
         </div>
+        <div class="hint" style="margin-top:6px">Semboller yalnızca: <code>.</code> ve <code>-</code></div>
       </div>
 
+      <!-- Kaydet alanı -->
       <div class="panel">
-        <div class="checks">
-          <label class="check"><input id="u" type="checkbox" checked> Büyük harf (A–Z)</label>
-          <label class="check"><input id="l" type="checkbox" checked> Küçük harf (a–z)</label>
-          <label class="check"><input id="d" type="checkbox" checked> Rakam (0–9)</label>
-          <label class="check"><input id="s" type="checkbox"> Semboller (yalnızca . ve -)</label>
+        <div class="savegrid">
+          <input id="nameInput" type="text" placeholder="Ad (ör. Apple ID, Gmail…)" aria-label="Ad">
+          <input id="tagsInput" type="text" placeholder="Etiketler (virgülle: iş, kişisel…)" aria-label="Etiketler">
+          <button id="saveBtn" class="btn" type="button">💾 Kaydet</button>
         </div>
-        <div class="hint" style="margin-top:6px">Semboller yalnızca: <code>.</code> ve <code>-</code>. “Oluştur”a basınca otomatik kaydedilir.</div>
-      </div>
-
-      <div class="panel">
-        <div class="foot">
+        <div class="foot" style="margin-top:10px">
           <div style="min-width:220px;flex:1">
             <div class="hint" id="msg">Hazır.</div>
             <div class="bar" aria-hidden="true"><span id="meter"></span></div>
@@ -83,6 +100,7 @@
         </div>
       </div>
 
+      <!-- Kayıtlılar -->
       <div class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
           <strong>Kaydedilmiş Şifreler</strong>
@@ -100,28 +118,30 @@
 
 <script>
 (function(){
-  // Elemanlar
+  // ---- Elemanlar
   var elPwd=document.getElementById('pwd');
   var elLen=document.getElementById('len');
   var cbU=document.getElementById('u'), cbL=document.getElementById('l'),
       cbD=document.getElementById('d'), cbS=document.getElementById('s');
-  var btnGen=document.getElementById('genBtn'), btnCopy=document.getElementById('copyBtn'), btnClear=document.getElementById('clearBtn');
+  var btnGen=document.getElementById('genBtn'), btnCopy=document.getElementById('copyBtn');
   var elMsg=document.getElementById('msg'), elMeter=document.getElementById('meter');
   var listEl=document.getElementById('savedList'), countHint=document.getElementById('countHint');
   var btnUnlock=document.getElementById('unlockBtn'), btnLock=document.getElementById('lockBtn'), lockedInfo=document.getElementById('lockedInfo');
+  var nameInput=document.getElementById('nameInput'), tagsInput=document.getElementById('tagsInput'), btnSave=document.getElementById('saveBtn');
+  var btnClear=document.getElementById('clearBtn');
 
-  // Karakter kümeleri
+  // ---- Karakter kümeleri
   var SET_U = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   var SET_L = "abcdefghijklmnopqrstuvwxyz";
   var SET_D = "0123456789";
   var SET_S = ".-"; // yalnızca . ve -
 
-  // LocalStorage anahtarları
-  var KEY='pwgen.saved.v1';
-  var KEY_LOCK='pwgen.lock.hash.v1'; // SHA-256 hash
+  // ---- LocalStorage anahtarları
+  var KEY='pwgen.entries.v1';     // [{name, tags[], pw, t}]
+  var KEY_LOCK='pwgen.lock.hash.v1'; // SHA-256 of viewing password
   var UNLOCKED=false;
 
-  // Güvenli rasgele
+  // ---- Güvenli rasgele
   function rand(max){
     if(window.crypto && window.crypto.getRandomValues){
       var arr=new Uint32Array(1); window.crypto.getRandomValues(arr);
@@ -137,7 +157,7 @@
     return a;
   }
 
-  // Güç göstergesi (DÜZELTİLMİŞ)
+  // Güç göstergesi
   function strength(p){
     var l=p.length, sets=0;
     if (/[A-Z]/.test(p)) sets++;
@@ -161,8 +181,8 @@
     });
   }
 
-  // ----- ŞİFRE ÜRETME -----
-  function generate(saveIt){
+  // ---- Şifre üretme (artık otomatik kaydetmez)
+  function generate(){
     var len = parseInt(elLen.value,10);
     if(isNaN(len) || len<4 || len>64){ elMsg.textContent="Uzunluk 4–64 olmalı"; return; }
 
@@ -182,44 +202,80 @@
     var pwd = out.join('');
     elPwd.textContent = pwd;
     strength(pwd);
+  }
 
-    if(saveIt){ savePassword(pwd); }
+  function copyText(txt){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      return navigator.clipboard.writeText(txt).then(function(){ elMsg.textContent="Kopyalandı"; });
+    }else{
+      var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
+      ta.select(); try{ document.execCommand('copy'); elMsg.textContent="Kopyalandı"; }catch(e){ elMsg.textContent="Kopyalanamadı"; }
+      ta.remove(); return Promise.resolve();
+    }
   }
 
   function copyCurrent(){
     var txt = elPwd.textContent || "";
     if(!txt || txt === "—"){ elMsg.textContent="Önce bir şifre üret"; return; }
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(txt).then(function(){ elMsg.textContent="Kopyalandı"; });
-    }else{
-      var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
-      ta.select(); try{ document.execCommand('copy'); elMsg.textContent="Kopyalandı"; }catch(e){ elMsg.textContent="Kopyalanamadı"; }
-      ta.remove();
-    }
+    copyText(txt);
   }
 
-  // ----- KAYIT & LİSTE -----
+  // ---- Kayıt yönetimi
   function loadAll(){ try{ var raw=localStorage.getItem(KEY); return raw? JSON.parse(raw): []; }catch(e){ return []; } }
   function saveAll(arr){ localStorage.setItem(KEY, JSON.stringify(arr)); }
 
-  function savePassword(p){
+  function saveEntry(){
+    var pw = (elPwd.textContent||"").trim();
+    if(!pw || pw==="—"){ elMsg.textContent="Önce şifre üret"; return; }
+    var name = (nameInput.value||"").trim();
+    if(!name){ elMsg.textContent="Ad zorunlu"; nameInput.focus(); return; }
+    var tags = (tagsInput.value||"").split(',').map(function(s){return s.trim();}).filter(Boolean).map(function(s){return s.toLowerCase();});
+
     var arr = loadAll();
-    arr.unshift({ pw:p, t:Date.now() });
-    if(arr.length>200) arr = arr.slice(0,200);
+    arr.unshift({ name:name, tags:tags, pw:pw, t:Date.now() });
+    if(arr.length>500) arr = arr.slice(0,500);
     saveAll(arr);
+
+    nameInput.value=''; tagsInput.value='';
+    elMsg.textContent="Kaydedildi";
     if(UNLOCKED) renderList();
   }
 
-  function deletePassword(idx){
+  function deleteEntry(idx){
     if(!UNLOCKED){ elMsg.textContent="Önce kilidi aç"; return; }
     var arr = loadAll();
     if(idx>=0 && idx<arr.length){ arr.splice(idx,1); saveAll(arr); renderList(); }
+  }
+
+  function editEntry(idx){
+    if(!UNLOCKED){ elMsg.textContent="Önce kilidi aç"; return; }
+    var arr = loadAll(); if(idx<0 || idx>=arr.length) return;
+    var item = arr[idx];
+
+    var newName = prompt("Adı düzenle:", item.name); if(newName===null) return;
+    newName = newName.trim(); if(!newName){ alert("Ad boş olamaz."); return; }
+
+    var tagStr = prompt("Etiketler (virgülle):", (item.tags||[]).join(', ')); if(tagStr===null) return;
+    var newTags = tagStr.split(',').map(function(s){return s.trim();}).filter(Boolean).map(function(s){return s.toLowerCase();});
+
+    var newPw = prompt("Şifre (değiştirmek istemezsen boş bırak):", item.pw); if(newPw===null) return;
+    newPw = newPw.trim() ? newPw.trim() : item.pw;
+
+    arr[idx] = { name:newName, tags:newTags, pw:newPw, t:Date.now() };
+    saveAll(arr);
+    renderList();
+    elMsg.textContent="Güncellendi";
   }
 
   function clearAllSaved(){
     if(!UNLOCKED){ elMsg.textContent="Önce kilidi aç"; return; }
     if(!confirm("Tüm kayıtlı şifreler silinsin mi?")) return;
     saveAll([]); renderList();
+  }
+
+  function tagChips(tags){
+    if(!tags || !tags.length) return '<span class="hint">etiket yok</span>';
+    return tags.map(function(t){return '<span class="tag">#'+t+'</span>';}).join(' ');
   }
 
   function renderList(){
@@ -243,35 +299,39 @@
     if(arr.length===0){
       var empty = document.createElement('div');
       empty.className = "hint";
-      empty.textContent = "Kayıt yok. 'Oluştur' ile şifre ürettiğinde otomatik kaydedilir.";
+      empty.textContent = "Kayıt yok. Şifre üret → Ad/Etiket gir → Kaydet.";
       listEl.appendChild(empty);
       return;
     }
+
     for(var i=0;i<arr.length;i++){
       (function(item, idx){
         var row = document.createElement('div'); row.className="item";
-        var pw = document.createElement('div'); pw.className="pw"; pw.textContent = item.pw;
+        var left = document.createElement('div'); left.className="left";
+        left.innerHTML =
+          '<div class="name">'+item.name+'</div>'+
+          '<div class="tags">'+tagChips(item.tags)+'</div>'+
+          '<div class="pw">'+item.pw+'</div>';
+
         var actions = document.createElement('div'); actions.className="actions";
         var bCopy = document.createElement('button'); bCopy.className="btn ghost sm"; bCopy.textContent="Kopyala";
-        bCopy.addEventListener('click', function(){
-          if(navigator.clipboard && navigator.clipboard.writeText){
-            navigator.clipboard.writeText(item.pw).then(function(){ elMsg.textContent="Kopyalandı"; });
-          }else{
-            var ta=document.createElement('textarea'); ta.value=item.pw; document.body.appendChild(ta);
-            ta.select(); try{ document.execCommand('copy'); elMsg.textContent="Kopyalandı"; }catch(e){ elMsg.textContent="Kopyalanamadı"; }
-            ta.remove();
-          }
-        });
+        bCopy.addEventListener('click', function(){ copyText(item.pw); });
+
+        var bEdit = document.createElement('button'); bEdit.className="btn ghost sm"; bEdit.textContent="Düzenle";
+        bEdit.addEventListener('click', function(){ editEntry(idx); });
+
         var bDel = document.createElement('button'); bDel.className="btn danger sm"; bDel.textContent="Sil";
-        bDel.addEventListener('click', function(){ deletePassword(idx); });
-        actions.appendChild(bCopy); actions.appendChild(bDel);
-        row.appendChild(pw); row.appendChild(actions);
+        bDel.addEventListener('click', function(){ deleteEntry(idx); });
+
+        actions.appendChild(bCopy); actions.appendChild(bEdit); actions.appendChild(bDel);
+
+        row.appendChild(left); row.appendChild(actions);
         listEl.appendChild(row);
       })(arr[i], i);
     }
   }
 
-  // ----- KİLİT AKIŞI -----
+  // ---- Kilit akışı
   function hasLock(){ return !!localStorage.getItem(KEY_LOCK); }
 
   function setLockFlow(){
@@ -305,18 +365,19 @@
     UNLOCKED=false; renderList(); elMsg.textContent="Kilitlendi.";
   }
 
-  // Bağlamalar
-  btnGen.addEventListener('click', function(){ generate(true); });
+  // ---- Bağlamalar
+  btnGen.addEventListener('click', generate);
   btnCopy.addEventListener('click', copyCurrent);
+  btnSave.addEventListener('click', saveEntry);
   btnClear.addEventListener('click', clearAllSaved);
   elLen.addEventListener('input', function(){ var v=parseInt(elLen.value,10); if(v<4) elLen.value=4; if(v>64) elLen.value=64; });
 
   btnUnlock.addEventListener('click', unlockFlow);
   btnLock.addEventListener('click', lockNow);
 
-  // İlk açılış: örnek üret (kaydetme), listeyi kilit durumuna göre göster
-  generate(false);
-  renderList();
+  // ---- İlk yükleme
+  generate();           // örnek üret (kaydetmez)
+  renderList();         // kilide göre liste
 })();
 </script>
 </body>
