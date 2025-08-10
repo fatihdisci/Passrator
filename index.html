@@ -28,13 +28,14 @@
   .hint{color:var(--muted);font-size:12px}
   .bar{height:8px;background:#1b1f29;border:1px solid var(--line);border-radius:999px;overflow:hidden}
   .bar>span{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff5a5f,#ffb15a,#4fb477)}
-  .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
   /* Kayıtlı liste */
   .list{display:flex;flex-direction:column;gap:8px}
   .item{display:flex;gap:8px;align-items:center;justify-content:space-between;background:#0f1116;border:1px solid var(--line);border-radius:10px;padding:8px}
   .item .pw{font:600 14px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;word-break:break-all;flex:1}
   .item .actions{display:flex;gap:6px}
   .sm{padding:6px 9px;font-weight:600;font-size:13px;border-radius:8px}
+  .row-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   @media (max-width:560px){.checks{grid-template-columns:1fr}.row{gap:8px}}
 </style>
 </head>
@@ -70,11 +71,15 @@
 
       <div class="panel">
         <div class="foot">
-          <div style="min-width:180px;flex:1">
+          <div style="min-width:220px;flex:1">
             <div class="hint" id="msg">Hazır.</div>
             <div class="bar" aria-hidden="true"><span id="meter"></span></div>
           </div>
-          <button id="clearBtn" class="btn danger sm" type="button">Tümünü Sil</button>
+          <div class="row-tools">
+            <button id="unlockBtn" class="btn ghost sm" type="button">👁️ Göster</button>
+            <button id="lockBtn" class="btn ghost sm" type="button" style="display:none">🔒 Kilitle</button>
+            <button id="clearBtn" class="btn danger sm" type="button">Tümünü Sil</button>
+          </div>
         </div>
       </div>
 
@@ -83,7 +88,10 @@
           <strong>Kaydedilmiş Şifreler</strong>
           <span class="hint" id="countHint">0 kayıt</span>
         </div>
-        <div id="savedList" class="list"></div>
+        <div id="lockedInfo" class="hint" style="display:block">
+          🔒 Kayıtlar gizli. Görmek için <b>Göster</b> butonuna tıkla.
+        </div>
+        <div id="savedList" class="list" style="display:none"></div>
       </div>
     </div>
 
@@ -100,12 +108,18 @@
   var btnGen=document.getElementById('genBtn'), btnCopy=document.getElementById('copyBtn'), btnClear=document.getElementById('clearBtn');
   var elMsg=document.getElementById('msg'), elMeter=document.getElementById('meter');
   var listEl=document.getElementById('savedList'), countHint=document.getElementById('countHint');
+  var btnUnlock=document.getElementById('unlockBtn'), btnLock=document.getElementById('lockBtn'), lockedInfo=document.getElementById('lockedInfo');
 
   // Karakter kümeleri
   var SET_U = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   var SET_L = "abcdefghijklmnopqrstuvwxyz";
   var SET_D = "0123456789";
   var SET_S = ".-"; // yalnızca . ve -
+
+  // LocalStorage anahtarları
+  var KEY='pwgen.saved.v1';
+  var KEY_LOCK='pwgen.lock.hash.v1'; // SHA-256 hash
+  var UNLOCKED=false;
 
   // Güvenli rasgele
   function rand(max){
@@ -123,22 +137,35 @@
     return a;
   }
 
+  // Basit güç göstergesi
   function strength(p){
     var l=p.length, sets=0;
     if(/[A-Z]/.test(p)) sets++;
     if(/[a-z]/.test(p)) sets++;
-    if(/[0-9]/.test(p)) sets++;
+    if/[0-9]/.test(p) sets++;
     if(/[.\-]/.test(p)) sets++;
     var score = Math.min(100, Math.round((l/64)*60 + sets*10 + (l>=12?10:0)));
     elMeter.style.width = score + "%";
     elMsg.textContent = score<40? "Zayıf" : score<70? "Orta" : "Güçlü";
   }
 
+  // SHA-256 (hex)
+  function sha256Hex(str){
+    if(!window.crypto || !window.crypto.subtle || !window.TextEncoder){
+      alert("Tarayıcı bu kilit özelliğini desteklemiyor."); return Promise.reject();
+    }
+    var enc = new TextEncoder().encode(str);
+    return crypto.subtle.digest('SHA-256', enc).then(function(buf){
+      var arr = Array.from(new Uint8Array(buf));
+      return arr.map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+    });
+  }
+
+  // ----- ŞİFRE ÜRETME -----
   function generate(saveIt){
     var len = parseInt(elLen.value,10);
     if(isNaN(len) || len<4 || len>64){ elMsg.textContent="Uzunluk 4–64 olmalı"; return; }
 
-    // Seçimler
     var pools=[], must=[];
     if(cbU.checked){ pools.push(SET_U); must.push(pick(SET_U)); }
     if(cbL.checked){ pools.push(SET_L); must.push(pick(SET_L)); }
@@ -147,14 +174,10 @@
 
     if(pools.length===0){ elMsg.textContent="En az bir kural seçin"; return; }
 
-    // Ortak havuz
     var pool = pools.join('');
-    var out = must.slice(); // her seçili kümeden en az 1 karakter garanti
-
-    // Kalanı doldur
+    var out = must.slice();
     while(out.length < len){ out.push( pick(pool) ); }
 
-    // Karıştır ve yaz
     shuffle(out);
     var pwd = out.join('');
     elPwd.textContent = pwd;
@@ -163,7 +186,6 @@
     if(saveIt){ savePassword(pwd); }
   }
 
-  // Kopyala (mevcut şifre)
   function copyCurrent(){
     var txt = elPwd.textContent || "";
     if(!txt || txt === "—"){ elMsg.textContent="Önce bir şifre üret"; return; }
@@ -176,26 +198,26 @@
     }
   }
 
-  // LocalStorage işlemleri
-  var KEY='pwgen.saved.v1';
+  // ----- KAYIT & LİSTE -----
   function loadAll(){ try{ var raw=localStorage.getItem(KEY); return raw? JSON.parse(raw): []; }catch(e){ return []; } }
   function saveAll(arr){ localStorage.setItem(KEY, JSON.stringify(arr)); }
 
   function savePassword(p){
     var arr = loadAll();
     arr.unshift({ pw:p, t:Date.now() });
-    // İstersen limit koyabiliriz: son 200 kayıt gibi.
     if(arr.length>200) arr = arr.slice(0,200);
     saveAll(arr);
-    renderList();
+    if(UNLOCKED) renderList(); // kilit açıksa anında görünür
   }
 
   function deletePassword(idx){
+    if(!UNLOCKED){ elMsg.textContent="Önce kilidi aç"; return; }
     var arr = loadAll();
     if(idx>=0 && idx<arr.length){ arr.splice(idx,1); saveAll(arr); renderList(); }
   }
 
   function clearAllSaved(){
+    if(!UNLOCKED){ elMsg.textContent="Önce kilidi aç"; return; }
     if(!confirm("Tüm kayıtlı şifreler silinsin mi?")) return;
     saveAll([]); renderList();
   }
@@ -203,6 +225,22 @@
   function renderList(){
     var arr = loadAll();
     countHint.textContent = arr.length + " kayıt";
+
+    if(!UNLOCKED){
+      // gizli mod
+      listEl.style.display = "none";
+      lockedInfo.style.display = "block";
+      btnUnlock.style.display = "inline-flex";
+      btnLock.style.display = "none";
+      return;
+    }
+
+    // açık mod
+    lockedInfo.style.display = "none";
+    listEl.style.display = "flex";
+    btnUnlock.style.display = "none";
+    btnLock.style.display = "inline-flex";
+
     listEl.innerHTML = "";
     if(arr.length===0){
       var empty = document.createElement('div');
@@ -235,13 +273,50 @@
     }
   }
 
+  // ----- KİLİT AKIŞI -----
+  function hasLock(){ return !!localStorage.getItem(KEY_LOCK); }
+
+  function setLockFlow(){
+    var p1 = prompt("Görüntüleme şifresi belirle (min 4 karakter):"); if(p1===null) return;
+    p1 = (p1||"").trim();
+    if(p1.length<4){ alert("En az 4 karakter olmalı."); return; }
+    var p2 = prompt("Şifreyi tekrar yaz:"); if(p2===null) return;
+    if(p1!==p2){ alert("Eşleşmiyor."); return; }
+    sha256Hex(p1).then(function(h){
+      localStorage.setItem(KEY_LOCK, h);
+      UNLOCKED=true; renderList();
+      elMsg.textContent="Kilit oluşturuldu ve açıldı.";
+    });
+  }
+
+  function unlockFlow(){
+    if(!hasLock()){ setLockFlow(); return; }
+    var p = prompt("Görüntüleme şifresi:");
+    if(p===null) return;
+    sha256Hex(p).then(function(h){
+      var stored = localStorage.getItem(KEY_LOCK);
+      if(h===stored){
+        UNLOCKED=true; renderList(); elMsg.textContent="Kilit açıldı.";
+      }else{
+        elMsg.textContent="Yanlış şifre.";
+      }
+    });
+  }
+
+  function lockNow(){
+    UNLOCKED=false; renderList(); elMsg.textContent="Kilitlendi.";
+  }
+
   // Bağlamalar
-  btnGen.addEventListener('click', function(){ generate(true); }); // Oluşturunca otomatik kaydet
+  btnGen.addEventListener('click', function(){ generate(true); });
   btnCopy.addEventListener('click', copyCurrent);
   btnClear.addEventListener('click', clearAllSaved);
   elLen.addEventListener('input', function(){ var v=parseInt(elLen.value,10); if(v<4) elLen.value=4; if(v>64) elLen.value=64; });
 
-  // İlk açılışta sadece bir örnek üret (KAYDETME!)
+  btnUnlock.addEventListener('click', unlockFlow);
+  btnLock.addEventListener('click', lockNow);
+
+  // İlk açılış: örnek üret (kaydetme), listeyi kilit durumuna göre göster
   generate(false);
   renderList();
 })();
