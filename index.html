@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Şifre Oluşturucu</title>
+<meta name="theme-color" content="#121212">
+<style>
+  :root{--bg:#0f0f11;--card:#16181d;--line:#262a33;--text:#e6e6e6;--muted:#9aa3ae;--accent:#4fb477;--danger:#d14d4d}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .wrap{min-height:100dvh;display:grid;place-items:center;padding:24px}
+  .card{width:100%;max-width:560px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  h1{margin:0 0 10px;font-size:18px}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .out{display:flex;gap:10px;align-items:center;background:#111319;border:1px solid var(--line);border-radius:12px;padding:10px}
+  #pwd{flex:1;font:600 16px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;color:#fff;word-break:break-all}
+  .btn{border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;padding:10px 12px;cursor:pointer}
+  .btn.ghost{background:#232833;color:var(--text);border:1px solid var(--line)}
+  .btn.danger{background:var(--danger)}
+  .grid{display:grid;gap:12px;margin-top:14px}
+  .panel{border:1px solid var(--line);border-radius:12px;padding:12px;background:#12141a}
+  .checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .check{display:flex;gap:8px;align-items:center;font-size:14px}
+  .check input{width:18px;height:18px}
+  .len{display:flex;gap:10px;align-items:center}
+  input[type="number"]{width:90px;background:#0f1116;border:1px solid var(--line);border-radius:10px;color:#fff;padding:8px 10px}
+  .hint{color:var(--muted);font-size:12px}
+  .bar{height:8px;background:#1b1f29;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  .bar>span{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff5a5f,#ffb15a,#4fb477)}
+  .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px}
+  @media (max-width:520px){.checks{grid-template-columns:1fr}.row{gap:8px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>🔐 Şifre Oluşturucu</h1>
+
+    <div class="out">
+      <div id="pwd" aria-live="polite">—</div>
+      <button id="copyBtn" class="btn ghost" type="button">📋 Kopyala</button>
+      <button id="genBtn" class="btn" type="button">🔑 Oluştur</button>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="len">
+          <label for="len"><strong>Karakter sayısı</strong></label>
+          <input id="len" type="number" min="4" max="64" value="12">
+          <div class="hint">4 – 64</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="checks">
+          <label class="check"><input id="u" type="checkbox" checked> Büyük harf (A–Z)</label>
+          <label class="check"><input id="l" type="checkbox" checked> Küçük harf (a–z)</label>
+          <label class="check"><input id="d" type="checkbox" checked> Rakam (0–9)</label>
+          <label class="check"><input id="s" type="checkbox"> Semboller (yalnızca . ve -)</label>
+        </div>
+        <div class="hint" style="margin-top:6px">Semboller yalnızca: <code>.</code> ve <code>-</code></div>
+      </div>
+
+      <div class="panel">
+        <div class="foot">
+          <div>
+            <div class="hint" id="msg">Hazır.</div>
+            <div class="bar" aria-hidden="true"><span id="meter"></span></div>
+          </div>
+          <button id="clearBtn" class="btn danger" type="button">Temizle</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  // Elemanlar
+  var elPwd=document.getElementById('pwd');
+  var elLen=document.getElementById('len');
+  var cbU=document.getElementById('u'), cbL=document.getElementById('l'),
+      cbD=document.getElementById('d'), cbS=document.getElementById('s');
+  var btnGen=document.getElementById('genBtn'), btnCopy=document.getElementById('copyBtn'), btnClear=document.getElementById('clearBtn');
+  var elMsg=document.getElementById('msg'), elMeter=document.getElementById('meter');
+
+  // Karakter kümeleri
+  var SET_U = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  var SET_L = "abcdefghijklmnopqrstuvwxyz";
+  var SET_D = "0123456789";
+  var SET_S = ".-"; // yalnızca . ve -
+
+  // Güvenli rasgele
+  function rand(max){
+    if(window.crypto && window.crypto.getRandomValues){
+      var arr=new Uint32Array(1); window.crypto.getRandomValues(arr);
+      return arr[0] % max;
+    }
+    return Math.floor(Math.random()*max);
+  }
+
+  function pick(set){ return set.charAt(rand(set.length)); }
+
+  // Diziyi karıştır (Fisher–Yates)
+  function shuffle(a){
+    for(var i=a.length-1;i>0;i--){ var j=rand(i+1); var t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+
+  function strength(p){
+    var l=p.length, sets=0;
+    if(/[A-Z]/.test(p)) sets++;
+    if(/[a-z]/.test(p)) sets++;
+    if(/[0-9]/.test(p)) sets++;
+    if(/[.\-]/.test(p)) sets++;
+    var score = Math.min(100, Math.round((l/64)*60 + sets*10 + (l>=12?10:0)));
+    elMeter.style.width = score + "%";
+    elMsg.textContent = score<40? "Zayıf" : score<70? "Orta" : "Güçlü";
+  }
+
+  function generate(){
+    var len = parseInt(elLen.value,10);
+    if(isNaN(len) || len<4 || len>64){ elMsg.textContent="Uzunluk 4–64 olmalı"; return; }
+
+    // Seçimler
+    var pools=[], must=[];
+    if(cbU.checked){ pools.push(SET_U); must.push(pick(SET_U)); }
+    if(cbL.checked){ pools.push(SET_L); must.push(pick(SET_L)); }
+    if(cbD.checked){ pools.push(SET_D); must.push(pick(SET_D)); }
+    if(cbS.checked){ pools.push(SET_S); must.push(pick(SET_S)); }
+
+    if(pools.length===0){ elMsg.textContent="En az bir kural seçin"; return; }
+
+    // Ortak havuz
+    var pool = pools.join('');
+    var out = must.slice(); // her seçili kümeden en az 1 karakter garanti
+
+    // Kalanı doldur
+    while(out.length < len){ out.push( pick(pool) ); }
+
+    // Karıştır ve yaz
+    shuffle(out);
+    var pwd = out.join('');
+    elPwd.textContent = pwd;
+    strength(pwd);
+  }
+
+  function copy(){
+    var txt = elPwd.textContent || "";
+    if(!txt || txt === "—"){ elMsg.textContent="Önce bir şifre üret"; return; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){ elMsg.textContent="Kopyalandı"; });
+    }else{
+      // Eski tarayıcılar için
+      var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
+      ta.select(); try{ document.execCommand('copy'); elMsg.textContent="Kopyalandı"; }catch(e){ elMsg.textContent="Kopyalanamadı"; }
+      ta.remove();
+    }
+  }
+
+  function clearAll(){
+    elPwd.textContent = "—";
+    elLen.value = 12;
+    cbU.checked = cbL.checked = cbD.checked = true;
+    cbS.checked = false;
+    elMeter.style.width = "0%";
+    elMsg.textContent = "Hazır.";
+  }
+
+  // Bağlamalar
+  btnGen.addEventListener('click', generate);
+  btnCopy.addEventListener('click', copy);
+  btnClear.addEventListener('click', clearAll);
+  elLen.addEventListener('input', function(){ var v=parseInt(elLen.value,10); if(v<4) elLen.value=4; if(v>64) elLen.value=64; });
+
+  // İlk yüklemede bir örnek üret
+  generate();
+})();
+</script>
+</body>
+</html>
