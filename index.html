@@ -137,16 +137,16 @@
     return a;
   }
 
-  // Basit güç göstergesi
+  // Güç göstergesi (DÜZELTİLMİŞ)
   function strength(p){
     var l=p.length, sets=0;
-    if(/[A-Z]/.test(p)) sets++;
-    if(/[a-z]/.test(p)) sets++;
-    if/[0-9]/.test(p) sets++;
-    if(/[.\-]/.test(p)) sets++;
+    if (/[A-Z]/.test(p)) sets++;
+    if (/[a-z]/.test(p)) sets++;
+    if (/[0-9]/.test(p)) sets++;
+    if (/[.\-]/.test(p)) sets++;
     var score = Math.min(100, Math.round((l/64)*60 + sets*10 + (l>=12?10:0)));
     elMeter.style.width = score + "%";
-    elMsg.textContent = score<40? "Zayıf" : score<70? "Orta" : "Güçlü";
+    elMsg.textContent = score<40 ? "Zayıf" : score<70 ? "Orta" : "Güçlü";
   }
 
   // SHA-256 (hex)
@@ -207,7 +207,7 @@
     arr.unshift({ pw:p, t:Date.now() });
     if(arr.length>200) arr = arr.slice(0,200);
     saveAll(arr);
-    if(UNLOCKED) renderList(); // kilit açıksa anında görünür
+    if(UNLOCKED) renderList();
   }
 
   function deletePassword(idx){
@@ -227,7 +227,6 @@
     countHint.textContent = arr.length + " kayıt";
 
     if(!UNLOCKED){
-      // gizli mod
       listEl.style.display = "none";
       lockedInfo.style.display = "block";
       btnUnlock.style.display = "inline-flex";
@@ -235,7 +234,6 @@
       return;
     }
 
-    // açık mod
     lockedInfo.style.display = "none";
     listEl.style.display = "flex";
     btnUnlock.style.display = "none";
